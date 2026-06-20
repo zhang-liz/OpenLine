@@ -10,4 +10,5 @@ dependencies = [
     "twilio==9.4.1",
     "gspread==6.1.4",
     "python-dotenv==1.0.1",
+    "python-multipart>=0.0.32",
 ]
