@@ -7,7 +7,7 @@ returns TwiML that opens a bidirectional Media Stream to /ws.
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse, Connect
 
-from . import config
+import config
 
 _client = Client(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN)
 

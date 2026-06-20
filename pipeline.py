@@ -23,11 +23,11 @@ from pipecat.transports.websocket.fastapi import (
     FastAPIWebsocketParams,
 )
 
-from . import config
-from .stt import make_stt
-from .llm import make_llm
-from .tts import make_tts
-from .prompt import build_system_prompt
+import config
+from stt import make_stt
+from llm import make_llm
+from tts import make_tts
+from prompt import build_system_prompt
 
 
 class CallSession:

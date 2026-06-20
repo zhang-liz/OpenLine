@@ -9,7 +9,7 @@ with the commented stub at the bottom.
 
 from pipecat.services.cartesia.tts import CartesiaTTSService
 
-from . import config
+import config
 
 
 def make_tts() -> CartesiaTTSService:

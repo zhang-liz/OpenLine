@@ -7,7 +7,7 @@ add a separate VAD upstream.
 
 from pipecat.services.assemblyai import AssemblyAISTTService, AssemblyAIConnectionParams
 
-from . import config
+import config
 
 
 def make_stt() -> AssemblyAISTTService:

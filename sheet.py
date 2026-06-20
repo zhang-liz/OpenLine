@@ -8,7 +8,7 @@ Share the sheet with the service account's client_email (Editor).
 
 import gspread
 
-from . import config
+import config
 
 # Expected header names, lowercased.
 _COLS = ("name", "phone", "email", "consent_given", "status", "transcript")

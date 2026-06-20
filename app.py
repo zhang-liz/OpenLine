@@ -15,8 +15,10 @@ import json
 from fastapi import FastAPI, Request, WebSocket, Header, HTTPException
 from fastapi.responses import PlainTextResponse, JSONResponse
 
-from . import config, sheet, twilio_client
-from .pipeline import build_pipeline_task, run_task
+import config
+import sheet
+import twilio_client
+from pipeline import build_pipeline_task, run_task
 
 app = FastAPI()
 

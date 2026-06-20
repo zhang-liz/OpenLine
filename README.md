@@ -25,7 +25,7 @@ Status + transcript written back to the row
   server's own write-back from re-triggering a call.
 - **No separate VAD:** AssemblyAI Universal-3 Pro Streaming does turn detection.
 - **Swappable services:** STT, LLM, and TTS each live in their own one-file
-  module (`voice_agent/stt.py`, `llm.py`, `tts.py`). Swap a provider by editing
+  module (`stt.py`, `llm.py`, `tts.py`). Swap a provider by editing
   one file. The Rime TTS slot is a commented stub in `tts.py`.
 
 ## Sheet format
@@ -80,7 +80,7 @@ python main.py
 
 ### 6. Apps Script trigger
 
-1. Sheet → **Extensions → Apps Script**, paste `voice_agent/apps_script.gs`.
+1. Sheet → **Extensions → Apps Script**, paste `apps_script.gs`.
 2. Set `SERVICE_URL` to `https://<PUBLIC_URL>/lead` and `SHARED_SECRET` to match
    `LEAD_SHARED_SECRET` in `.env`.
 3. **Triggers → Add Trigger →** function `onChange`, event source *From
@@ -102,15 +102,14 @@ Add a lead row with a phone and blank status → the agent calls them.
 main.py                  entrypoint (loads .env, runs uvicorn)
 requirements.txt
 .env.example
-voice_agent/
-  app.py                 FastAPI: /lead, /twiml, /ws, /status
-  pipeline.py            builds the Pipecat pipeline per call
-  stt.py                 AssemblyAI  (swappable)
-  llm.py                 Claude Haiku (swappable)
-  tts.py                 Cartesia, Rime slot (swappable)
-  sheet.py               gspread read/write
-  twilio_client.py       outbound call + TwiML
-  prompt.py              agent system prompt
-  config.py              env vars
-  apps_script.gs         paste into the Sheet's Apps Script
+app.py                   FastAPI: /lead, /twiml, /ws, /status
+pipeline.py              builds the Pipecat pipeline per call
+stt.py                   AssemblyAI  (swappable)
+llm.py                   Claude Haiku (swappable)
+tts.py                   Cartesia, Rime slot (swappable)
+sheet.py                 gspread read/write
+twilio_client.py         outbound call + TwiML
+prompt.py                agent system prompt
+config.py                env vars
+apps_script.gs           paste into the Sheet's Apps Script
 ```

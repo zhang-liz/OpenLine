@@ -6,7 +6,7 @@ config-driven (LLM_MODEL) so swapping to a different Claude tier is an env chang
 
 from pipecat.services.anthropic.llm import AnthropicLLMService
 
-from . import config
+import config
 
 
 def make_llm() -> AnthropicLLMService:
