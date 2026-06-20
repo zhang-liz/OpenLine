@@ -44,9 +44,11 @@ One worksheet used as the call queue. Header row (case-insensitive):
 
 ### 1. Python
 
+Uses [uv](https://docs.astral.sh/uv/). `uv sync` creates the venv and installs
+the locked deps.
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync
 cp .env.example .env   # then fill it in
 ```
 
@@ -75,7 +77,7 @@ Set `PUBLIC_URL` to the ngrok host (no scheme), e.g. `abc123.ngrok.io`.
 ### 5. Run
 
 ```bash
-python main.py
+uv run python main.py
 ```
 
 ### 6. Apps Script trigger
@@ -100,7 +102,8 @@ Add a lead row with a phone and blank status → the agent calls them.
 
 ```
 main.py                  entrypoint (loads .env, runs uvicorn)
-requirements.txt
+pyproject.toml           deps (managed by uv)
+uv.lock                  pinned lockfile
 .env.example
 app.py                   FastAPI: /lead, /twiml, /ws, /status
 pipeline.py              builds the Pipecat pipeline per call

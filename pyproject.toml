@@ -1,0 +1,13 @@
+[project]
+name = "callback-voice-agent"
+version = "0.1.0"
+description = "Outbound voice agent: calls Google Sheet leads via Twilio + Pipecat"
+requires-python = ">=3.11"
+dependencies = [
+    "pipecat-ai[anthropic,assemblyai,cartesia,silero]==0.0.90",
+    "fastapi==0.118.0",
+    "uvicorn[standard]==0.37.0",
+    "twilio==9.4.1",
+    "gspread==6.1.4",
+    "python-dotenv==1.0.1",
+]
