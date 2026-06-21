@@ -51,9 +51,9 @@ flowchart LR
     H -. closed loop .-> B
 
     classDef sheet fill:#0F9D58,stroke:#0B7A43,color:#fff;
-    classDef call fill:#F22F46,stroke:#B71C2E,color:#fff;
+    classDef voice fill:#F22F46,stroke:#B71C2E,color:#fff;
     class B,H sheet;
-    class F,G call;
+    class F,G voice;
 ```
 
 <details>
