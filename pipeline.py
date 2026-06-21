@@ -17,6 +17,8 @@ from pipecat.pipeline.runner import PipelineRunner
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
 from pipecat.processors.transcript_processor import TranscriptProcessor
+from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.serializers.twilio import TwilioFrameSerializer
 from pipecat.transports.websocket.fastapi import (
     FastAPIWebsocketTransport,
@@ -65,7 +67,10 @@ def build_pipeline_task(
         params=FastAPIWebsocketParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            # AssemblyAI does its own turn detection -- no VAD here.
+            # VAD drives barge-in: fast local speech-onset detection emits the
+            # UserStartedSpeakingFrame that interrupts TTS. AssemblyAI still
+            # owns end-of-turn endpointing (see stt.py).
+            vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
             serializer=serializer,
         ),
     )
@@ -102,7 +107,7 @@ def build_pipeline_task(
 
     task = PipelineTask(
         pipeline,
-        params=PipelineParams(allow_interruptions=True),
+        params=PipelineParams(allow_interruptions=True, enable_metrics=True),
     )
 
     # Kick off the conversation: have the agent speak first once connected.
