@@ -115,6 +115,13 @@ def build_pipeline_task(
     async def _on_connected(_transport, _client):
         await task.queue_frames([aggregator.user().get_context_frame()])
 
+    # When Twilio hangs up it closes the websocket; cancel the task so run_task()
+    # returns and the transcript gets written back. Without this the pipeline
+    # keeps running (services try to reconnect) and the write-back never fires.
+    @transport.event_handler("on_client_disconnected")
+    async def _on_disconnected(_transport, _client):
+        await task.cancel()
+
     return task, session
 
 
