@@ -4,7 +4,7 @@ Endpoints
 ---------
 POST /lead    Apps Script hits this when a new row appears. Validates consent,
               places the outbound Twilio call. Guarded by a shared secret.
-GET  /twiml   Twilio fetches TwiML for the call; returns Connect/Stream to /ws.
+GET/POST /twiml   Twilio fetches TwiML for the call; returns Connect/Stream to /ws.
 WS   /ws      Twilio Media Streams connects here; runs the Pipecat pipeline and
               writes the transcript back to the sheet when the call ends.
 POST /status  Twilio status callback; writes final status to the sheet.
@@ -49,7 +49,7 @@ async def lead(request: Request, x_lead_secret: str = Header(default="")):
     return JSONResponse({"status": "calling", "call_sid": call_sid, "row": row})
 
 
-@app.get("/twiml")
+@app.api_route("/twiml", methods=["GET", "POST"])
 async def twiml(row: int):
     """Twilio fetches this to learn how to handle the call."""
     return PlainTextResponse(
