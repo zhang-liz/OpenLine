@@ -31,10 +31,16 @@ def place_call(to_number: str, row_number: int) -> str:
 
 
 def build_twiml(row_number: int) -> str:
-    """TwiML that connects the call audio to our websocket."""
+    """TwiML that connects the call audio to our websocket.
+
+    Twilio strips the query string from a <Stream> url, so the sheet row is
+    passed as a <Parameter>; it arrives in the websocket "start" event under
+    start.customParameters.
+    """
     response = VoiceResponse()
     connect = Connect()
-    stream_url = f"wss://{config.PUBLIC_URL}/ws?row={row_number}"
-    connect.stream(url=stream_url)
+    stream_url = f"wss://{config.PUBLIC_URL}/ws"
+    stream = connect.stream(url=stream_url)
+    stream.parameter(name="row", value=str(row_number))
     response.append(connect)
     return str(response)

@@ -58,14 +58,21 @@ async def twiml(row: int):
 
 
 @app.websocket("/ws")
-async def ws(websocket: WebSocket, row: int):
-    """Twilio Media Streams websocket. Runs the pipeline for one call."""
+async def ws(websocket: WebSocket):
+    """Twilio Media Streams websocket. Runs the pipeline for one call.
+
+    The sheet row arrives in the "start" event's customParameters (Twilio drops
+    the <Stream> url query string), so it is read there rather than from a query
+    param -- which is why the handshake is accepted before the row is known.
+    """
     await websocket.accept()
 
     # Twilio sends two JSON text frames first: "connected", then "start" which
-    # carries streamSid and callSid. Read them before building the pipeline.
+    # carries streamSid, callSid, and customParameters. Read them before
+    # building the pipeline.
     stream_sid = None
     call_sid = None
+    row = None
     for _ in range(2):
         message = await websocket.receive_text()
         data = json.loads(message)
@@ -73,11 +80,15 @@ async def ws(websocket: WebSocket, row: int):
             start = data["start"]
             stream_sid = start["streamSid"]
             call_sid = start["callSid"]
+            params = start.get("customParameters") or {}
+            row = params.get("row")
             break
 
-    if not stream_sid:
+    if not stream_sid or row is None:
         await websocket.close()
         return
+
+    row = int(row)
 
     lead_row = sheet.get_lead(row)
     task, session = build_pipeline_task(
