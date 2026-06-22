@@ -18,9 +18,15 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 import config
 import sheet
 import twilio_client
-from pipeline import build_pipeline_task, run_task
+from pipeline import build_pipeline_task, run_task, prewarm
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    """Warm the Silero VAD / onnxruntime init so the first call doesn't pay it."""
+    prewarm()
 
 
 @app.post("/lead")
@@ -45,15 +51,16 @@ async def lead(request: Request, x_lead_secret: str = Header(default="")):
         sheet.write_result(row, "failed", "skipped: no phone")
         return JSONResponse({"status": "skipped", "reason": "no phone"})
 
-    call_sid = twilio_client.place_call(phone, row)
+    # Pass the name along so /ws can greet without a second sheet read.
+    call_sid = twilio_client.place_call(phone, row, str(lead_row.get("name", "")))
     return JSONResponse({"status": "calling", "call_sid": call_sid, "row": row})
 
 
 @app.api_route("/twiml", methods=["GET", "POST"])
-async def twiml(row: int):
+async def twiml(row: int, name: str = ""):
     """Twilio fetches this to learn how to handle the call."""
     return PlainTextResponse(
-        twilio_client.build_twiml(row), media_type="application/xml"
+        twilio_client.build_twiml(row, name), media_type="application/xml"
     )
 
 
@@ -73,6 +80,7 @@ async def ws(websocket: WebSocket):
     stream_sid = None
     call_sid = None
     row = None
+    name = ""
     for _ in range(2):
         message = await websocket.receive_text()
         data = json.loads(message)
@@ -82,6 +90,7 @@ async def ws(websocket: WebSocket):
             call_sid = start["callSid"]
             params = start.get("customParameters") or {}
             row = params.get("row")
+            name = params.get("name", "")
             break
 
     if not stream_sid or row is None:
@@ -90,10 +99,9 @@ async def ws(websocket: WebSocket):
 
     row = int(row)
 
-    lead_row = sheet.get_lead(row)
-    task, session = build_pipeline_task(
-        websocket, stream_sid, call_sid, lead_row.get("name", "")
-    )
+    # name arrives via customParameters (set in build_twiml), so no second sheet
+    # read is needed here -- one less round trip before the agent can speak.
+    task, session = build_pipeline_task(websocket, stream_sid, call_sid, name)
 
     try:
         await run_task(task)

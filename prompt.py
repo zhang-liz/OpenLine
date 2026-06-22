@@ -96,3 +96,20 @@ stage."""
 def build_system_prompt(name: str) -> str:
     """Fill the prompt with the lead's name (falls back to 'there')."""
     return SYSTEM_PROMPT.format(name=name or "there")
+
+
+# The opener is always the same intro + permission ask (prompt goals 1-2), so we
+# speak it as a fixed line instead of round-tripping the LLM for the first turn.
+# This shaves the LLM time-to-first-token off the very first thing the lead hears.
+# The same text is seeded into the context as an assistant turn (see pipeline.py)
+# so the model knows it has already greeted and asked permission.
+GREETING = (
+    "Hi {name}, this is Chloe from Bayhaus Creative, calling about the form you "
+    "just submitted. Is now a good time? I've got a couple of quick questions, "
+    "and a producer will follow up right after."
+)
+
+
+def build_greeting(name: str) -> str:
+    """Fixed opener spoken before the LLM is engaged (falls back to 'there')."""
+    return GREETING.format(name=name or "there")

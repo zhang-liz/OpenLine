@@ -11,6 +11,7 @@ taps user (post-STT) and assistant (post-TTS) text.
 
 from fastapi import WebSocket
 
+from pipecat.frames.frames import TTSSpeakFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.task import PipelineTask, PipelineParams
 from pipecat.pipeline.runner import PipelineRunner
@@ -29,7 +30,7 @@ import config
 from stt import make_stt
 from llm import make_llm
 from tts import make_tts
-from prompt import build_system_prompt
+from prompt import build_system_prompt, build_greeting
 
 
 class CallSession:
@@ -79,8 +80,15 @@ def build_pipeline_task(
     llm = make_llm()
     tts = make_tts()
 
+    # Seed the fixed opener as an assistant turn so the LLM knows it has already
+    # introduced itself and asked permission. The line itself is spoken directly
+    # via TTS on connect (below), skipping the LLM for the first utterance.
+    greeting = build_greeting(lead_name)
     context = LLMContext(
-        messages=[{"role": "system", "content": build_system_prompt(lead_name)}],
+        messages=[
+            {"role": "system", "content": build_system_prompt(lead_name)},
+            {"role": "assistant", "content": greeting},
+        ],
     )
     aggregator = LLMContextAggregatorPair(context)
 
@@ -110,10 +118,12 @@ def build_pipeline_task(
         params=PipelineParams(allow_interruptions=True, enable_metrics=True),
     )
 
-    # Kick off the conversation: have the agent speak first once connected.
+    # Kick off the conversation: speak the fixed opener directly via TTS once
+    # connected. No LLM round-trip for the first line -- the lead hears audio as
+    # soon as TTS yields its first chunk. The LLM only runs once they reply.
     @transport.event_handler("on_client_connected")
     async def _on_connected(_transport, _client):
-        await task.queue_frames([aggregator.user().get_context_frame()])
+        await task.queue_frames([TTSSpeakFrame(greeting)])
 
     # When Twilio hangs up it closes the websocket; cancel the task so run_task()
     # returns and the transcript gets written back. Without this the pipeline
@@ -129,3 +139,15 @@ async def run_task(task: PipelineTask) -> None:
     """Run a built task to completion."""
     runner = PipelineRunner(handle_sigint=False)
     await runner.run(task)
+
+
+def prewarm() -> None:
+    """Pay the one-time Silero VAD / onnxruntime init cost at server startup.
+
+    The ONNX model is loaded per call (the analyzer carries per-stream state, so
+    it can't be shared across concurrent calls), but the first load also triggers
+    onnxruntime's lazy provider init and the model-file disk read. Building and
+    discarding one analyzer at boot warms all of that so the first real call
+    doesn't eat the spike on its critical path.
+    """
+    SileroVADAnalyzer(params=VADParams(stop_secs=0.2))

@@ -136,7 +136,7 @@ flowchart LR
 
     Twilio <--> TIN
     TOUT <--> Twilio
-    STT <-->|stream| AAI[AssemblyAI STT]
+    STT <-->|stream| AAI[🗣️ AssemblyAI STT]
     LLM <-->|stream| CL[Claude Haiku]
     TTS <-->|stream| CART[Cartesia TTS]
     TR --> SHEET[(📊 Your Sheet)]
