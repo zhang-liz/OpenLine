@@ -40,12 +40,13 @@ A lead submits a form → a row appears → OpenLine calls them → the transcri
 comes back to the row. One closed loop, no dashboard to babysit.
 
 ```mermaid
-flowchart LR
-    A[📝 Lead submits<br/>interest form] --> B[(Google Sheet<br/>new row)]
-    B -->|Apps Script<br/>onChange| C[FastAPI /lead]
-    C --> D{consent<br/>given?}
-    D -->|no| E[mark failed,<br/>never dial]
-    D -->|yes| F[☎️ Twilio<br/>outbound call]
+%%{init: {'theme':'base', 'flowchart': {'nodeSpacing': 60, 'rankSpacing': 55}, 'themeVariables': {'fontSize': '20px'}}}%%
+flowchart TD
+    A[📝 Lead submits interest form] --> B[(Google Sheet · new row)]
+    B -->|Apps Script onChange| C[FastAPI /lead]
+    C --> D{consent given?}
+    D -->|no| E[mark failed, never dial]
+    D -->|yes| F[☎️ Twilio outbound call]
     F --> G[🎙️ Pipecat pipeline<br/>STT → Claude → TTS]
     G -->|call ends| H[(Sheet row updated<br/>status + transcript)]
     H -. closed loop .-> B
@@ -56,23 +57,6 @@ flowchart LR
     class F,G voice;
 ```
 
-<details>
-<summary>Plain-text fallback (no Mermaid)</summary>
-
-```
-New row in Sheet
-   │  (Apps Script onChange → POST /lead)
-   ▼
-FastAPI /lead ── checks consent ── Twilio outbound call
-   │
-   ▼  Twilio fetches /twiml → Connect/Stream to wss /ws
-Pipecat pipeline:  Twilio MediaStream ⇄ AssemblyAI STT → Claude Haiku → Cartesia TTS
-   │
-   ▼  call ends
-Status + transcript written back to the row   ──┐
-   └──────────────── closed loop ───────────────┘
-```
-</details>
 
 - **Trigger:** Apps Script `onChange` POSTs the new row number to `/lead`. Only
   rows with a blank `status` fire — this both detects new leads and stops the
@@ -85,33 +69,34 @@ Status + transcript written back to the row   ──┐
 ## Anatomy of a single call
 
 ```mermaid
+%%{init: {'theme':'base', 'sequence': {'actorFontSize': 18, 'messageFontSize': 16, 'noteFontSize': 16, 'actorMargin': 38, 'boxMargin': 12, 'bottomMarginAdj': 25, 'mirrorActors': true}}}%%
 sequenceDiagram
     autonumber
     participant S as 📊 Sheet
     participant AS as Apps Script
     participant API as FastAPI
     participant TW as Twilio
-    participant P as Pipecat pipeline
+    participant P as Pipecat
     participant L as 🧑 Lead
 
     S->>AS: new row (onChange)
-    AS->>API: POST /lead {row}  + shared secret
-    API->>S: read row, check consent
-    API->>TW: place outbound call
+    AS->>API: POST /lead + secret
+    API->>S: read row + consent
+    API->>TW: outbound call
     TW->>API: GET/POST /twiml
-    API-->>TW: <Connect><Stream wss /ws>
+    API-->>TW: Connect Stream /ws
     TW->>L: rings phone
     L-->>TW: answers
-    TW->>P: bidirectional media stream
-    Note over P,L: agent speaks first, then listens
-    loop conversation (barge-in allowed)
+    TW->>P: media stream
+    Note over P,L: agent speaks first
+    loop conversation (barge-in)
         L->>P: speech
         P->>P: STT → Claude → TTS
         P-->>L: voice reply
     end
     L->>TW: hangs up
-    TW->>API: POST /status (no-answer / failed)
-    P->>S: write status + transcript
+    TW->>API: POST /status
+    P->>S: write transcript
 ```
 
 ---
@@ -123,15 +108,16 @@ Each provider talks to its own external API; everything orchestrating the call
 runs on **your** host. Swap any box by editing its one file.
 
 ```mermaid
-flowchart LR
-    Twilio[(☎️ Twilio<br/>phone audio)]
+%%{init: {'theme':'base', 'flowchart': {'nodeSpacing': 55, 'rankSpacing': 50}, 'themeVariables': {'fontSize': '20px'}}}%%
+flowchart TD
+    Twilio[(☎️ Twilio · phone audio)]
 
     subgraph host["🖥️ Your host — one async pipeline per call"]
-        direction LR
+        direction TB
         TIN[transport.in] --> STT[stt.py]
-        STT --> CTX[context<br/>memory] --> LLM[llm.py] --> TTS[tts.py] --> TOUT[transport.out]
+        STT --> CTX[context memory] --> LLM[llm.py] --> TTS[tts.py] --> TOUT[transport.out]
         VAD[Silero VAD] -. barge-in: interrupt .-> TTS
-        TR[transcript<br/>processor]
+        TR[transcript processor]
     end
 
     Twilio <--> TIN
@@ -145,21 +131,6 @@ flowchart LR
     class STT,LLM,TTS swap;
 ```
 
-<details>
-<summary>Plain-text fallback (no Mermaid)</summary>
-
-```
-Twilio MediaStream
-   ⇅
-[transport.in] → [STT: stt.py] → [context memory] → [LLM: llm.py] → [TTS: tts.py] → [transport.out]
-                                                                          ▲
-                        [Silero VAD] ── barge-in: interrupt ─────────────┘
-   ⇅
-[transcript processor] → Your Google Sheet
-
-External APIs (swappable, one file each):  STT→AssemblyAI   LLM→Claude   TTS→Cartesia
-```
-</details>
 
 **Barge-in:** the caller can interrupt the agent mid-sentence. Silero VAD detects
 speech onset locally and fires the interrupt; AssemblyAI still decides when the
