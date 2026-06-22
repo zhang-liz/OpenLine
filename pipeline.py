@@ -139,3 +139,15 @@ async def run_task(task: PipelineTask) -> None:
     """Run a built task to completion."""
     runner = PipelineRunner(handle_sigint=False)
     await runner.run(task)
+
+
+def prewarm() -> None:
+    """Pay the one-time Silero VAD / onnxruntime init cost at server startup.
+
+    The ONNX model is loaded per call (the analyzer carries per-stream state, so
+    it can't be shared across concurrent calls), but the first load also triggers
+    onnxruntime's lazy provider init and the model-file disk read. Building and
+    discarding one analyzer at boot warms all of that so the first real call
+    doesn't eat the spike on its critical path.
+    """
+    SileroVADAnalyzer(params=VADParams(stop_secs=0.2))
