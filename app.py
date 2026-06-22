@@ -18,9 +18,15 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 import config
 import sheet
 import twilio_client
-from pipeline import build_pipeline_task, run_task
+from pipeline import build_pipeline_task, run_task, prewarm
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    """Warm the Silero VAD / onnxruntime init so the first call doesn't pay it."""
+    prewarm()
 
 
 @app.post("/lead")
